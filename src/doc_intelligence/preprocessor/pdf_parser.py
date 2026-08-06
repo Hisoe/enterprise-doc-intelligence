@@ -1,65 +1,68 @@
-"""Text sanitization, normalization, and token-counting utilities."""
+"""Resilient multi-engine PDF text extractor with layout preservation."""
 
-import re
-import unicodedata
+from pathlib import Path
+from typing import Any
 
-import tiktoken
+import pdfplumber
+from pypdf import PdfReader
+
+from doc_intelligence.preprocessor.cleaner import TextCleaner
 
 
-class TextCleaner:
-    """Production-grade text sanitizer and token budget estimator."""
+class PDFExtractionError(Exception):
+    """Raised when all PDF extraction backends fail to parse a document."""
 
-    def __init__(self, model_name: str = "gpt-4o") -> None:
-        """Initialize tiktoken encoder for the target model family."""
+    pass
+
+
+class PDFParser:
+    """PDF Extractor utilizing pdfplumber as primary engine with pypdf fallback."""
+
+    def __init__(self, cleaner: TextCleaner | None = None) -> None:
+        self.cleaner = cleaner or TextCleaner()
+
+    def extract_from_file(self, file_path: str | Path) -> dict[str, Any]:
+        """Extracts, cleans, and counts tokens from a local PDF file path.
+
+        Primary Strategy: pdfplumber (preserves visual positioning and tables).
+        Fallback Strategy: pypdf (resilient to minor stream corruption).
+        """
+        path = Path(file_path)
+        if not path.exists():
+            raise FileNotFoundError(f"PDF file not found at path: {path}")
+
+        raw_pages: list[str] = []
+        extraction_method = "pdfplumber"
+
         try:
-            self.tokenizer = tiktoken.encoding_for_model(model_name)
-        except KeyError:
-            # Fallback to cl100k_base (standard for GPT-3.5/GPT-4) if model name is unrecognized
-            self.tokenizer = tiktoken.get_encoding("cl100k_base")
+            # Primary Engine: pdfplumber
+            with pdfplumber.open(path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text(layout=True) or ""
+                    raw_pages.append(page_text)
 
-    def sanitize_utf8(self, text: str) -> str:
-        """Normalize Unicode characters to NFC standard and strip ASCII control characters."""
-        if not text:
-            return ""
+        except Exception:
+            # Fallback Engine: pypdf
+            extraction_method = "pypdf"
+            raw_pages = []
+            try:
+                reader = PdfReader(str(path))
+                for page in reader.pages:
+                    raw_pages.append(page.extract_text() or "")
+            except Exception as err:
+                raise PDFExtractionError(
+                    f"Failed to extract text from '{path.name}' using both pdfplumber and pypdf."
+                ) from err
 
-        # Standardize Unicode representations (e.g., combining characters)
-        text = unicodedata.normalize("NFC", text)
+        raw_combined = "\n\n".join(raw_pages)
+        cleaned_text = self.cleaner.clean(raw_combined)
+        token_count = self.cleaner.count_tokens(cleaned_text)
 
-        # Strip non-printable ASCII control characters except tabs (\t) and newlines (\n)
-        text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]", "", text)
-
-        return text
-
-    def strip_headers_and_footers(self, text: str) -> str:
-        """Remove repeating page numbers, timestamps, and boilerplate headers."""
-        # Strip common pagination patterns: "Page 1 of 10", "PAGE 1/5", "Page - 1 -"
-        page_pattern = r"(?i)\bpage\s*[-:\s]?\s*\d+\s*(?:of|/|-)?\s*\d*\b"
-        text = re.sub(page_pattern, "", text)
-
-        # Strip standalone isolated trailing digits on newlines (often artifact page numbers)
-        text = re.sub(r"\n\s*\d+\s*\n", "\n", text)
-
-        return text
-
-    def normalize_whitespace(self, text: str) -> str:
-        """Collapse redundant spaces and excessive newlines while preserving paragraph structure."""
-        # Convert runs of spaces or tabs into a single space
-        text = re.sub(r"[ \t]+", " ", text)
-
-        # Collapse 3 or more consecutive newlines into 2 (preserving standard paragraph gaps)
-        text = re.sub(r"\n{3,}", "\n\n", text)
-
-        return text.strip()
-
-    def clean(self, raw_text: str) -> str:
-        """Execute full cleaning pipeline on raw document text."""
-        text = self.sanitize_utf8(raw_text)
-        text = self.strip_headers_and_footers(text)
-        text = self.normalize_whitespace(text)
-        return text
-
-    def count_tokens(self, text: str) -> int:
-        """Calculate exact token count using tiktoken BPE encoding."""
-        if not text:
-            return 0
-        return len(self.tokenizer.encode(text))
+        return {
+            "file_name": path.name,
+            "raw_character_count": len(raw_combined),
+            "cleaned_character_count": len(cleaned_text),
+            "token_count": token_count,
+            "extraction_method": extraction_method,
+            "cleaned_text": cleaned_text,
+        }
