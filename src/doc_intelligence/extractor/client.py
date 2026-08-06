@@ -1,4 +1,4 @@
-"""Client factory providing Azure OpenAI / OpenAI access with Langfuse tracing."""
+"""Client factory providing Azure OpenAI / Azure Serverless / OpenAI access with Langfuse tracing."""
 
 import logging
 
@@ -10,24 +10,36 @@ logger = logging.getLogger(__name__)
 
 
 def get_openai_client() -> tuple[AzureOpenAI | OpenAI, str]:
-    """Initializes and returns a Langfuse-traced OpenAI client along with the active deployment.
-
-    Priority:
-    1. Azure OpenAI Service (Enterprise Primary)
-    2. Direct OpenAI API (Developer Fallback)
-
-    Raises:
-        ValueError: If neither Azure OpenAI nor direct OpenAI credentials are configured.
-    """
+    """Initializes and returns a Langfuse-traced OpenAI client along with the active deployment/model name."""
     if settings.is_azure_configured:
-        logger.info("Initializing Azure OpenAI client with Langfuse tracing...")
+        endpoint = (settings.AZURE_OPENAI_ENDPOINT or "").strip()
+
+        # 1. Azure Serverless / MaaS Endpoint (Contains /v1 path)
+        if "/v1" in endpoint:
+            # Guarantee trailing slash so httpx does not strip /v1/ during request joining
+            if not endpoint.endswith("/"):
+                endpoint += "/"
+
+            logger.info(
+                "Initializing Azure Serverless (MaaS) client with Langfuse tracing (endpoint: %s)...",
+                endpoint,
+            )
+            client = OpenAI(
+                base_url=endpoint,
+                api_key=settings.AZURE_OPENAI_API_KEY,
+            )
+            return client, settings.AZURE_OPENAI_DEPLOYMENT_NAME
+
+        # 2. Classic Azure OpenAI Service (Managed Compute)
+        logger.info("Initializing Classic Azure OpenAI client with Langfuse tracing...")
         client = AzureOpenAI(
-            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT,
+            azure_endpoint=endpoint,
             api_key=settings.AZURE_OPENAI_API_KEY,
             api_version=settings.AZURE_OPENAI_API_VERSION,
         )
         return client, settings.AZURE_OPENAI_DEPLOYMENT_NAME
 
+    # 3. Direct OpenAI API Fallback
     if settings.OPENAI_API_KEY:
         logger.info("Azure credentials missing. Falling back to Direct OpenAI client...")
         client = OpenAI(
