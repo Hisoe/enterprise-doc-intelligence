@@ -17,7 +17,8 @@ class TextCleaner:
             # Fallback to cl100k_base (standard for GPT-3.5/GPT-4) if model name is unrecognized
             self.tokenizer = tiktoken.get_encoding("cl100k_base")
 
-    def sanitize_utf8(self, text: str) -> str:
+    @staticmethod
+    def sanitize_utf8(text: str) -> str:
         """Normalize Unicode characters to NFC standard and strip ASCII control characters."""
         if not text:
             return ""
@@ -30,7 +31,8 @@ class TextCleaner:
 
         return text
 
-    def strip_headers_and_footers(self, text: str) -> str:
+    @staticmethod
+    def strip_headers_and_footers(text: str) -> str:
         """Remove repeating page numbers, timestamps, and boilerplate headers."""
         # Strip common pagination patterns: "Page 1 of 10", "PAGE 1/5", "Page - 1 -"
         page_pattern = r"(?i)\bpage\s*[-:\s]?\s*\d+\s*(?:of|/|-)?\s*\d*\b"
@@ -41,7 +43,8 @@ class TextCleaner:
 
         return text
 
-    def normalize_whitespace(self, text: str) -> str:
+    @staticmethod
+    def normalize_whitespace(text: str) -> str:
         """Collapse redundant spaces and excessive newlines while preserving paragraph structure."""
         # Convert runs of spaces or tabs into a single space
         text = re.sub(r"[ \t]+", " ", text)
@@ -51,11 +54,12 @@ class TextCleaner:
 
         return text.strip()
 
-    def clean(self, raw_text: str) -> str:
-        """Execute full cleaning pipeline on raw document text."""
-        text = self.sanitize_utf8(raw_text)
-        text = self.strip_headers_and_footers(text)
-        text = self.normalize_whitespace(text)
+    @classmethod
+    def clean(cls, raw_text: str) -> str:
+        """Execute full cleaning pipeline as a class utility method."""
+        text = cls.sanitize_utf8(raw_text)
+        text = cls.strip_headers_and_footers(text)
+        text = cls.normalize_whitespace(text)
         return text
 
     def count_tokens(self, text: str) -> int:
