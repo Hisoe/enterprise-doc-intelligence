@@ -503,6 +503,7 @@ name = "enterprise-doc-intelligence"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "deepeval" },
     { name = "fastapi" },
     { name = "langfuse" },
     { name = "openai" },
@@ -527,6 +528,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "deepeval", specifier = ">=4.1.5" },
     { name = "deepeval", marker = "extra == 'dev'", specifier = ">=1.0.0" },
     { name = "fastapi", specifier = ">=0.111.0" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0" },

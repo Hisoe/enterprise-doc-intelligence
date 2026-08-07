@@ -1,0 +1,132 @@
+[
+    {
+        "id": "doc_001",
+        "raw_text": "INVOICE #INV-1001\nDate: 2026-08-01\nVendor: Acme Supplies LLC\nTax ID: US-123456789\nItem: Office Chairs | Qty: 2 | Price: $150.00 | Total: $300.00\nSubtotal: $300.00\nTax: $24.00\nTotal: $324.00",
+        "ground_truth": {
+            "vendor_name": "Acme Supplies LLC",
+            "invoice_number": "INV-1001",
+            "invoice_date": "2026-08-01",
+            "subtotal": 300.0,
+            "tax_amount": 24.0,
+            "total_amount": 324.0,
+            "line_items_count": 1
+        }
+    },
+    {
+        "id": "doc_002",
+        "raw_text": "INVOICE #INV-2026-99\nDate: 2026-07-15\nVendor: Cloud Hosting Corp\nItem: Server Infrastructure | Qty: 1 | Price: $1200.00 | Total: $1200.00\nItem: Database Backup | Qty: 1 | Price: $300.00 | Total: $300.00\nSubtotal: $1500.00\nTax: $0.00\nTotal: $1500.00",
+        "ground_truth": {
+            "vendor_name": "Cloud Hosting Corp",
+            "invoice_number": "INV-2026-99",
+            "invoice_date": "2026-07-15",
+            "subtotal": 1500.0,
+            "tax_amount": 0.0,
+            "total_amount": 1500.0,
+            "line_items_count": 2
+        }
+    },
+    {
+        "id": "doc_003",
+        "raw_text": "BILL OF SALE #BS-881\nDate: 2026-05-10\nVendor: Global Logistics Ltd\nItem: Freight Shipping | Qty: 5 | Price: $100.00 | Total: $500.00\nSubtotal: $500.00\nTax: $50.00\nTotal: $550.00",
+        "ground_truth": {
+            "vendor_name": "Global Logistics Ltd",
+            "invoice_number": "BS-881",
+            "invoice_date": "2026-05-10",
+            "subtotal": 500.0,
+            "tax_amount": 50.0,
+            "total_amount": 550.0,
+            "line_items_count": 1
+        }
+    },
+    {
+        "id": "doc_004",
+        "raw_text": "INVOICE #90012\nDate: 2026-01-01\nVendor: Apex Hardware\nItem: Nails Box | Qty: 10 | Price: $5.00 | Total: $50.00\nSubtotal: $50.00\nTax: $4.00\nTotal: $54.00",
+        "ground_truth": {
+            "vendor_name": "Apex Hardware",
+            "invoice_number": "90012",
+            "invoice_date": "2026-01-01",
+            "subtotal": 50.0,
+            "tax_amount": 4.0,
+            "total_amount": 54.0,
+            "line_items_count": 1
+        }
+    },
+    {
+        "id": "doc_005",
+        "raw_text": "INVOICE #INV-5541\nDate: 2026-03-22\nVendor: SaaS Metrics Inc\nItem: Enterprise Plan | Qty: 1 | Price: $5000.00 | Total: $5000.00\nSubtotal: $5000.00\nTax: $400.00\nTotal: $5400.00",
+        "ground_truth": {
+            "vendor_name": "SaaS Metrics Inc",
+            "invoice_number": "INV-5541",
+            "invoice_date": "2026-03-22",
+            "subtotal": 5000.0,
+            "tax_amount": 400.0,
+            "total_amount": 5400.0,
+            "line_items_count": 1
+        }
+    },
+    {
+        "id": "doc_006",
+        "raw_text": "INVOICE #INV-007\nDate: 2026-04-12\nVendor: Security Systems Co\nItem: Camera Installation | Qty: 2 | Price: $400.00 | Total: $800.00\nSubtotal: $800.00\nTax: $64.00\nTotal: $864.00",
+        "ground_truth": {
+            "vendor_name": "Security Systems Co",
+            "invoice_number": "INV-007",
+            "invoice_date": "2026-04-12",
+            "subtotal": 800.0,
+            "tax_amount": 64.0,
+            "total_amount": 864.0,
+            "line_items_count": 1
+        }
+    },
+    {
+        "id": "doc_007",
+        "raw_text": "INVOICE #INV-008\nDate: 2026-04-15\nVendor: Office Depot\nItem: Paper reams | Qty: 20 | Price: $5.00 | Total: $100.00\nSubtotal: $100.00\nTax: $8.00\nTotal: $108.00",
+        "ground_truth": {
+            "vendor_name": "Office Depot",
+            "invoice_number": "INV-008",
+            "invoice_date": "2026-04-15",
+            "subtotal": 100.0,
+            "tax_amount": 8.0,
+            "total_amount": 108.0,
+            "line_items_count": 1
+        }
+    },
+    {
+        "id": "doc_008",
+        "raw_text": "INVOICE #INV-009\nDate: 2026-04-18\nVendor: Dev Tools Corp\nItem: IDE License | Qty: 5 | Price: $200.00 | Total: $1000.00\nSubtotal: $1000.00\nTax: $80.00\nTotal: $1080.00",
+        "ground_truth": {
+            "vendor_name": "Dev Tools Corp",
+            "invoice_number": "INV-009",
+            "invoice_date": "2026-04-18",
+            "subtotal": 1000.0,
+            "tax_amount": 80.0,
+            "total_amount": 1080.0,
+            "line_items_count": 1
+        }
+    },
+    {
+        "id": "doc_009",
+        "raw_text": "INVOICE #INV-010\nDate: 2026-04-20\nVendor: Legal Services Group\nItem: Consultation | Qty: 2 | Price: $300.00 | Total: $600.00\nSubtotal: $600.00\nTax: $0.00\nTotal: $600.00",
+        "ground_truth": {
+            "vendor_name": "Legal Services Group",
+            "invoice_number": "INV-010",
+            "invoice_date": "2026-04-20",
+            "subtotal": 600.0,
+            "tax_amount": 0.0,
+            "total_amount": 600.0,
+            "line_items_count": 1
+        }
+    },
+    {
+        "id": "doc_010",
+        "raw_text": "INVOICE #INV-011\nDate: 2026-04-25\nVendor: Catering Operations\nItem: Lunch Event | Qty: 1 | Price: $450.00 | Total: $450.00\nSubtotal: $450.00\nTax: $36.00\nTotal: $486.00",
+        "ground_truth": {
+            "vendor_name": "Catering Operations",
+            "invoice_number": "INV-011",
+            "invoice_date": "2026-04-25",
+            "subtotal": 450.0,
+            "tax_amount": 36.0,
+            "total_amount": 486.0,
+            "line_items_count": 1
+        }
+    }
+]

@@ -17,6 +17,7 @@ dependencies = [
     "tenacity>=8.3.0",
     "python-multipart>=0.0.9",
     "tiktoken>=0.7.0",
+    "deepeval>=4.1.5",
 ]
 
 [project.optional-dependencies]
