@@ -37,7 +37,7 @@ def run_evaluation_benchmark() -> None:
     if not dataset_path.exists():
         raise FileNotFoundError(f"Dataset not found at {dataset_path}")
 
-    with open(dataset_path, "r", encoding="utf-8") as f:
+    with open(dataset_path, encoding="utf-8") as f:
         dataset = json.load(f)  # 👈 'dataset' defined HERE
 
     # 3. Instantiate extraction engine after loading env and dataset
