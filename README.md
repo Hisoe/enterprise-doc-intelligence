@@ -1,27 +1,58 @@
-# 📄 Enterprise Document Intelligence & Extraction Pipeline
+# 🏢 Enterprise Document Intelligence Microservice
 
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Pydantic v2](https://img.shields.io/badge/Pydantic-v2.7+-e92063.svg)](https://docs.pydantic.dev/)
-[![Azure OpenAI](https://img.shields.io/badge/Azure_OpenAI-GPT--4o--mini-0078D4.svg?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/en-us/products/ai-services/openai-service)
-[![Langfuse](https://img.shields.io/badge/Observability-Langfuse-black.svg)](https://langfuse.com)
-[![Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![CI Pipeline](https://github.com/<YOUR_USERNAME>/enterprise-doc-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/<YOUR_USERNAME>/enterprise-doc-intelligence/actions/workflows/ci.yml)
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0%2B-009688.svg)](https://fastapi.tiangolo.com/)
+[![Pydantic v2](https://img.shields.io/badge/Pydantic-v2.0%2B-red.svg)](https://docs.pydantic.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](Dockerfile)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-An end-to-end, enterprise-ready microservice that transforms unstructured, noisy business documents (PDFs, invoices, contracts) into strictly typed, validated JSON objects using Azure OpenAI and Pydantic v2. 
+An asynchronous, enterprise-grade AI extraction service engineered to convert unstructured financial documents (Invoices, Receipts, Purchase Orders) into strongly typed, mathematically validated JSON schemas.
 
-Unlike basic LLM wrapper scripts, this system is engineered with **production hygiene at its core**: dual-provider resilience, automated text cleaning, multi-engine PDF fallback parsing, self-healing JSON retry loops, and full LLM execution tracing.
-
----
-
-## 🏗️ Architectural Differentiators
-
-* **🛡️ Dual-Provider Resilient Client:** Built-in factory pattern prioritizing **Azure OpenAI Service** (enterprise SLA & data privacy) with zero-downtime fallback to direct **OpenAI API** if Azure credentials are unconfigured or offline.
-* **🔒 Strict Schema Enforcement (Pydantic v2):** Uses `pydantic-settings` for fail-at-startup environment loading and Pydantic models for strict structured output extraction (preventing malformed JSON payloads).
-* **🧼 Preprocessing & Text Normalization:** Multi-engine PDF extractor (`pdfplumber` with `pypdf` fallback) coupled with regex sanitization to strip zero-width characters, page header noise, and token bloat before calling the LLM.
-* **📊 Telemetry & Observability:** Integrated **Langfuse** tracing at the client boundary to capture token costs, latency distributions, and input/output prompts across execution spans.
-* **⚡ Modern Python Tooling Stack:** Dependency locking managed via `uv`, PEP 604 type hints, strict linting/formatting via `Ruff`, and containerized deployment with `Dockerfile`.
+Built with **Pydantic v2 self-healing error recovery**, **non-blocking threadpool ingestion**, **tiktoken context budget enforcement**, and **network-level observability with Langfuse**.
 
 ---
+
+## 🏗️ System Architecture & Workflow
+
+```text
+ Client (cURL / ERP / Web App)
+              │
+              ▼ [POST /api/v1/extract/invoice]
+ ┌────────────────────────────────────────────────────────┐
+ │ FastAPI Middleware Layer (api/middleware.py)           │
+ │  • Inject Correlation ID (X-Request-ID: UUID4)        │
+ │  • Track Latency (X-Process-Time-MS)                  │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Ingestion & Security Guardrails (api/routes.py)        │
+ │  • Enforce 10MB Payload Limit                          │
+ │  • Offload pypdf Parsing to Worker Threadpool          │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Text Normalization & Token Budgeting                  │
+ │  • Unicode NFC Normalization & Control Char Stripping  │
+ │  • Tiktoken Context Budget Validator (< 8,000 Tokens) │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Self-Healing Extraction Engine [Langfuse Traced]      │
+ │  • Dual-Routing Client Factory (Azure Foundry / OpenAI)│
+ │  • Pydantic v2 Cross-Field Mathematical Validation     │
+ │  • Tenacity Exponential Backoff Retry Loop             │
+ │  • Re-injects Validation Trace on Schema Exceptions    │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ API Envelope Response (HTTP 200 / Mapped 4xx/5xx)      │
+ └────────────────────────────────────────────────────────┘
+```
 
 ## 🛠️ Tech Stack & Dependencies
 
@@ -39,13 +70,89 @@ Unlike basic LLM wrapper scripts, this system is engineered with **production hy
 
 ## 📊 Quantitative Quality Benchmarks
 
-To ensure high-precision extractions in production, the microservice is continuously benchmarked against a ground-truth dataset (`tests/eval/dataset.json`) across 7 primary entity fields (`invoice_number`, `invoice_date`, `subtotal`, `tax_amount`, `total`, `vendor_name`, `line_items_count`).
+The microservice is evaluated against a ground-truth dataset (`tests/eval/dataset.json`) across 7 primary entity fields (`invoice_number`, `invoice_date`, `subtotal`, `tax_amount`, `total`, `vendor_name`, `line_items_count`).
 
 | Benchmark Metric | Target Threshold | Measured Result | Status |
-| :--- | :---: | :---: | :---: |
-| **Schema Compliance Rate** | $\ge 90.0\%$ | **`100.00%`** (10/10) | 🟢 PASS |
-| **Exact Field Match Rate** | $\ge 90.0\%$ | **`100.00%`** (70/70) | 🟢 PASS |
-| **Self-Healing Error Recovery** | $\le 3\text{ attempts}$ | **`100.00%`** | 🟢 PASS |
-| **Mean End-to-End Latency** | $< 2500\text{ ms}$ | **`~1140 ms`** | 🟢 PASS |
+| :--- | :--- | :--- | :--- |
+| **Schema Compliance Rate** | $\ge 90.0\%$ | 100.00% (10/10) | 🟢 PASS |
+| **Exact Field Match Rate** | $\ge 90.0\%$ | 100.00% (70/70) | 🟢 PASS |
+| **Self-Healing Error Recovery** | $\le 3	ext{ attempts}$ | 100.00% | 🟢 PASS |
+| **Mean End-to-End Latency** | $< 2500	ext{ ms}$ | ~1140 ms | 🟢 PASS |
 
 ---
+
+## ⚡ Quickstart (1-Command Docker Setup)
+
+### Prerequisites
+- Docker & Docker Compose installed
+
+### 1. Launch Service
+
+```bash
+# Clone repository
+git clone https://github.com/<YOUR_USERNAME>/enterprise-doc-intelligence.git
+cd enterprise-doc-intelligence
+
+# Start API container
+docker compose up -d --build
+```
+
+Access interactive Swagger documentation at: `http://localhost:8000/docs`
+
+---
+
+## 🧪 Local Development & Testing
+
+```bash
+# Install dependencies via uv
+uv sync
+
+# Run linter
+uv run ruff check .
+
+# Run unit tests
+uv run pytest -v
+
+# Run evaluation benchmark
+uv run python tests/eval/run_evals.py
+```
+
+---
+
+## 📝 API Usage Example
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/extract/invoice"   -H "accept: application/json"   -F "file=@sample_invoice.pdf;type=application/pdf"
+```
+
+### Example Response Payload
+
+```json
+{
+  "success": true,
+  "request_id": "c1f7a0b2-3e4d-4f1a-8c90-9f123456789a",
+  "process_time_ms": 1140.22,
+  "data": {
+    "vendor": {
+      "name": "Acme Industrial Tools Inc.",
+      "tax_id": "US-987654321",
+      "address": "100 Innovation Way, Austin, TX 78701"
+    },
+    "invoice_number": "INV-2026-08912",
+    "invoice_date": "2026-08-01",
+    "due_date": "2026-08-31",
+    "currency": "USD",
+    "subtotal": 1200.00,
+    "tax_amount": 96.00,
+    "total": 1296.00,
+    "line_items": [
+      {
+        "description": "Server Rack Cabinet 42U",
+        "quantity": 2.0,
+        "unit_price": 600.00,
+        "line_total": 1200.00
+      }
+    ]
+  }
+}
+```
