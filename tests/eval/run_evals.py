@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def _get_total_val(extracted: InvoiceExtractionData) -> float:
     """Helper to safely extract the total amount across possible schema attribute variants."""
-    for attr in ["total", "total_amount", "grand_total", "amount_due", "total_due"]:
+    for attr in ["grand_total", "total", "total_amount", "amount_due", "total_due"]:
         if hasattr(extracted, attr):
             return getattr(extracted, attr)
     raise AttributeError(
@@ -29,16 +29,18 @@ def _get_total_val(extracted: InvoiceExtractionData) -> float:
 
 def run_evaluation_benchmark() -> None:
     """Executes benchmark suite over ground-truth synthetic dataset and prints metric summary."""
-    # Load .env environment variables at runtime before instantiating ExtractionEngine
+    # 1. Load environment variables first
     load_dotenv()
 
+    # 2. Locate and load ground-truth dataset
     dataset_path = Path(__file__).parent / "dataset.json"
     if not dataset_path.exists():
         raise FileNotFoundError(f"Dataset not found at {dataset_path}")
 
-    with open(dataset_path, encoding="utf-8") as f:
-        dataset = json.load(f)
+    with open(dataset_path, "r", encoding="utf-8") as f:
+        dataset = json.load(f)  # 👈 'dataset' defined HERE
 
+    # 3. Instantiate extraction engine after loading env and dataset
     engine = ExtractionEngine()
 
     total_docs = len(dataset)
@@ -89,16 +91,15 @@ def run_evaluation_benchmark() -> None:
             else:
                 logger.warning(
                     "[%s] Field mismatch on '%s': Expected %s, got %s",
-                    doc_id,
-                    field_name,
-                    expected_val,
-                    actual_val,
+                    doc_id, field_name, expected_val, actual_val,
                 )
 
     # Calculate Metrics
     schema_compliance_rate = (schema_compliant_count / total_docs) * 100.0
     exact_match_rate = (
-        (matched_field_checks / total_field_checks) * 100.0 if total_field_checks > 0 else 0.0
+        (matched_field_checks / total_field_checks) * 100.0
+        if total_field_checks > 0
+        else 0.0
     )
 
     print("\n" + "=" * 65)
@@ -115,10 +116,12 @@ def run_evaluation_benchmark() -> None:
     )
     print("=" * 65 + "\n")
 
-    assert schema_compliance_rate >= 90.0, (
-        f"Schema compliance below threshold: {schema_compliance_rate}%"
-    )
-    assert exact_match_rate >= 90.0, f"Exact match rate below threshold: {exact_match_rate}%"
+    assert (
+        schema_compliance_rate >= 90.0
+    ), f"Schema compliance below threshold: {schema_compliance_rate}%"
+    assert (
+        exact_match_rate >= 90.0
+    ), f"Exact match rate below threshold: {exact_match_rate}%"
 
 
 if __name__ == "__main__":
