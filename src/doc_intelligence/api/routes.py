@@ -5,7 +5,7 @@ import logging
 from typing import Annotated
 
 import pypdf
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from starlette.concurrency import run_in_threadpool
 
 from doc_intelligence.api.middleware import get_request_id
@@ -18,12 +18,28 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["Document Extraction"])
 
-# Singleton instances for route layer
-extraction_engine = ExtractionEngine()
-text_cleaner = TextCleaner()
-
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB payload limit
-MAX_TOKEN_BUDGET = 8000  # Token limit per request payload
+MAX_TOKEN_BUDGET = 8000  # Token budget per request payload
+
+# Singletons managed via lazy dependency injection
+_engine_instance: ExtractionEngine | None = None
+_cleaner_instance: TextCleaner | None = None
+
+
+def get_extraction_engine() -> ExtractionEngine:
+    """Lazy dependency provider for ExtractionEngine singleton."""
+    global _engine_instance
+    if _engine_instance is None:
+        _engine_instance = ExtractionEngine()
+    return _engine_instance
+
+
+def get_text_cleaner() -> TextCleaner:
+    """Lazy dependency provider for TextCleaner singleton."""
+    global _cleaner_instance
+    if _cleaner_instance is None:
+        _cleaner_instance = TextCleaner()
+    return _cleaner_instance
 
 
 def _extract_text_from_pdf_bytes_sync(pdf_bytes: bytes) -> str:
@@ -54,18 +70,9 @@ def _extract_text_from_pdf_bytes_sync(pdf_bytes: bytes) -> str:
         "or as a raw text string. Returns structured JSON matching InvoiceExtractionData."
     ),
     responses={
-        400: {
-            "model": ErrorDetail,
-            "description": "Bad Request - Invalid payload or file size exceeded",
-        },
-        422: {
-            "model": ErrorDetail,
-            "description": "Unprocessable Entity - Schema validation failed",
-        },
-        429: {
-            "model": ErrorDetail,
-            "description": "Too Many Requests - Provider rate limit exceeded",
-        },
+        400: {"model": ErrorDetail, "description": "Bad Request - Invalid payload or file size exceeded"},
+        422: {"model": ErrorDetail, "description": "Unprocessable Entity - Schema validation failed"},
+        429: {"model": ErrorDetail, "description": "Too Many Requests - Provider rate limit exceeded"},
         504: {"model": ErrorDetail, "description": "Gateway Timeout - Upstream AI model timed out"},
     },
 )
@@ -83,6 +90,8 @@ async def extract_invoice(
         int,
         Form(description="Maximum self-healing attempts if schema validation fails."),
     ] = 3,
+    engine: Annotated[ExtractionEngine, Depends(get_extraction_engine)] = None,
+    cleaner: Annotated[TextCleaner, Depends(get_text_cleaner)] = None,
 ) -> APIResponseEnvelope[InvoiceExtractionData]:
     """Extracts structured invoice metrics from file upload or raw text."""
     request_id = get_request_id(request)
@@ -100,7 +109,7 @@ async def extract_invoice(
     if file:
         logger.info("[%s] Processing uploaded file: %s", request_id, file.filename)
 
-        # Fail fast if file size header is declared over limit
+        # Fail fast on declared header size
         if file.size and file.size > MAX_FILE_SIZE_BYTES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,6 +118,7 @@ async def extract_invoice(
 
         file_bytes = await file.read()
 
+        # Enforce actual byte size check post-read
         if len(file_bytes) > MAX_FILE_SIZE_BYTES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -117,7 +127,6 @@ async def extract_invoice(
 
         filename_lower = (file.filename or "").lower()
         if filename_lower.endswith(".pdf"):
-            # Offload CPU-bound PDF parsing to worker threadpool
             document_content = await run_in_threadpool(
                 _extract_text_from_pdf_bytes_sync, file_bytes
             )
@@ -140,7 +149,7 @@ async def extract_invoice(
         )
 
     # Token Budget Guardrail
-    token_count = text_cleaner.count_tokens(cleaned_text)
+    token_count = cleaner.count_tokens(cleaned_text)
     logger.info("[%s] Ingested document token count: %d tokens", request_id, token_count)
     if token_count > MAX_TOKEN_BUDGET:
         raise HTTPException(
@@ -151,8 +160,10 @@ async def extract_invoice(
             ),
         )
 
-    # 4. Phase 3 Extraction Engine Execution
-    extracted_data = extraction_engine.extract(
+    # 4. Asynchronous Threadpool Offload for Extraction Engine
+    # Protects async event loop if engine.extract is synchronous I/O
+    extracted_data = await run_in_threadpool(
+        engine.extract,
         cleaned_text=cleaned_text,
         schema=InvoiceExtractionData,
         max_attempts=max_attempts,
