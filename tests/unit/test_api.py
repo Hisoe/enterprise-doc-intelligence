@@ -1,6 +1,7 @@
 """Unit test suite for document extraction API routes."""
 
 from unittest.mock import MagicMock
+
 import pytest
 from fastapi.testclient import TestClient
 
