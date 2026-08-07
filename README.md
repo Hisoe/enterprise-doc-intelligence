@@ -21,8 +21,8 @@ Built with **Pydantic v2 self-healing error recovery**, **non-blocking threadpoo
               ▼ [POST /api/v1/extract/invoice]
  ┌────────────────────────────────────────────────────────┐
  │ FastAPI Middleware Layer (api/middleware.py)           │
- │  • Inject Correlation ID (X-Request-ID: UUID4)        │
- │  • Track Latency (X-Process-Time-MS)                  │
+ │  • Inject Correlation ID (X-Request-ID: UUID4)         │
+ │  • Track Latency (X-Process-Time-MS)                   │
  └───────────────────────────┬────────────────────────────┘
                              │
                              ▼
@@ -34,14 +34,14 @@ Built with **Pydantic v2 self-healing error recovery**, **non-blocking threadpoo
                              │
                              ▼
  ┌────────────────────────────────────────────────────────┐
- │ Text Normalization & Token Budgeting                  │
+ │ Text Normalization & Token Budgeting                   │
  │  • Unicode NFC Normalization & Control Char Stripping  │
- │  • Tiktoken Context Budget Validator (< 8,000 Tokens) │
+ │  • Tiktoken Context Budget Validator (< 8,000 Tokens)  │
  └───────────────────────────┬────────────────────────────┘
                              │
                              ▼
  ┌────────────────────────────────────────────────────────┐
- │ Self-Healing Extraction Engine [Langfuse Traced]      │
+ │ Self-Healing Extraction Engine [Langfuse Traced]       │
  │  • Dual-Routing Client Factory (Azure Foundry / OpenAI)│
  │  • Pydantic v2 Cross-Field Mathematical Validation     │
  │  • Tenacity Exponential Backoff Retry Loop             │
@@ -90,7 +90,7 @@ The microservice is evaluated against a ground-truth dataset (`tests/eval/datase
 
 ```bash
 # Clone repository
-git clone https://github.com/<YOUR_USERNAME>/enterprise-doc-intelligence.git
+git clone https://github.com/Hisoe/enterprise-doc-intelligence.git
 cd enterprise-doc-intelligence
 
 # Start API container
